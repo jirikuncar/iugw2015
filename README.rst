@@ -79,3 +79,41 @@ example we need to install ``Flask`` dependecy. The fastest way is to use
     $ python example/app.py
 
 How do we automatize this environment creation and make it repeatable?
+
+Dockerfile
+~~~~~~~~~~
+
+Now, create a configuration specifying all dependencies for creating your
+Docker image.
+
+.. code-block:: text
+
+    FROM python:3.5
+    ADD . /code
+    WORKDIR /code
+    RUN pip install -r requirements.txt
+    CMD python app.py
+
+We build an image starting with the Python 3.5 image. The next command adds the
+current directory ``.`` into the path ``/code`` in the image. Then we set the
+working directory to ``/code``. In next step we will take advantage of
+previously created ``requirements.txt`` file with our Python dependencies. The
+last step is to set the default command for the container run when started to
+``python app.py``.
+
+If you have done everything correctly, you can build the image by running
+``docker build -t web .``.
+
+We have our image and now we need a machine to run it.
+
+.. code-block:: console
+
+    $ docker-machine create -d virtualbox dev
+    $ eval "$(docker-machine env dev)"
+    $ docker run -d --name=example -p 5000:5000 web
+    $ open "http://`docker-machine ip dev`:5000"
+
+Do you have a problem?
+
+- Check that your docker machine is running ``docker-machine ls``.
+- Check that your docker image is running ``docker ps``.
