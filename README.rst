@@ -37,3 +37,45 @@ your binaries.
 `<https://github.com/jirikuncar/iugw2015>`_.
 
 *If you find any typo or error, please fork it and submit a PR.*
+
+1. Build your Flask application
+-------------------------------
+
+The outcome of this section should be running Flask application in your
+Docker machine.
+
+Flask
+~~~~~
+
+We can start by copy and pasting example from *Flask* homepage.
+
+.. imgae:: http://flask.pocoo.org/static/logo/flask.png
+    :target: http://flask.pocoo.org/
+
+.. code-block:: python
+
+    from flask import Flask
+    app = Flask(__name__)
+
+    @app.route("/")
+    def hello():
+        return "Hello World!"
+
+    if __name__ == "__main__":
+        app.run()
+
+
+You can find the application in ``./example/app.py``. For running this
+example we need to install ``Flask`` dependecy. The fastest way is to use
+``pip install Flask``. To help the automatization process we add
+``Flask>=0.10.1`` to ``./example/requrements.txt``.
+
+*Imatient students can try it on their own machine (in new virtualenv).*
+
+.. code-block:: console
+
+    # mkvirtualenv iugw2015
+    $ pip install -r example/requirements.txt
+    $ python example/app.py
+
+How do we automatize this environment creation and make it repeatable?
