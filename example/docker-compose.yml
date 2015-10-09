@@ -5,8 +5,12 @@ web:
   volumes:
    - .:/code
   links:
+   - db
    - redis
   environment:
    - REDIS_HOST=redis
+   - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:postgres@db:5432/postgres
 redis:
   image: redis
+db:
+  image: postgres

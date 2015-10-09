@@ -189,3 +189,109 @@ services running in the background using ``-d`` option.
 *A: You can use ``docker-compose logs`` to see logs from all machines or
 just ``docker-compose logs redis`` if you want to see logs from ``redis``
 one.*
+
+Database
+~~~~~~~~
+
+In order to simplify our excercise we will take advantage of some excelent
+libraries:
+
+- ``SQLAlchemy`` provides database ORM;
+- ``SQLAlchemy-Utils`` hides some implementation details;
+- ``Flask-SQLAlchemy`` provides integration with ``Flask`` application.
+
+Please include them in your ``requirements.txt``.
+
+In the next step we define your shared database object and first model.
+
+.. code-block:: python
+
+    from flask_sqlalchemy import SQLAlchemy
+    from sqlalchemy_utils.fields import JSONField
+
+    app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
+        'SQLALCHEMY_DATABASE_URI', 'sqlite:////tmp/test.db'
+    )
+    db = SQLAlchemy(app)
+
+
+    class Record(db.Model):
+        __tablename__ = 'record'
+        id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+        json = db.Column(JSONField)
+
+
+**Q: How do I create the database tables?**
+
+*A: In our demo we will try to create database tables everytime we start the
+application using ``db.create_all()``.*
+
+If you try to run the script now it will create new SQLite database in
+``/tmp/test.db``. Better way is to use external database service or new
+image with database of your choice and make the plumbing using
+``docker-compose``.
+
+In this tutorial we will show the integration with default image of
+*Postgres* database from Docker Hub.
+
+- Add new image ``db: postgres`` and link ``web`` with ``db``;
+- Include new environment variable for ``web`` with following value
+  ``SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:postgres@db:5432/postgres``;
+- Include ``psyconpg2`` in ``requirements.txt``.
+
+Please build and restart your ``docker-compose`` daemon. It will pull
+latest ``postgres`` image and setup your application to use it instead of
+*SQLite*.
+
+Now it is time to implement some simple REST API for your ``Record``
+model.
+
+.. code-block:: python
+
+    @app.route("/record", methods=['POST'])
+    def add():
+        data = json.loads(request.data.decode('utf-8'))
+        record = Record(json=data)
+        db.session.add(record)
+        db.session.commit()
+        return jsonify(id=record.id, data=record.json)
+
+
+    @app.route("/record", methods=['GET'])
+    def list():
+        return jsonify(results=[
+            dict(id=r.id, data=r.json) for r in Record.query.all()
+        ])
+
+
+When you safe ``app.py`` check that the application server has been
+reloaded.
+
+*Uploading new record:*
+
+.. code-block:: console
+
+    $ curl -H "Content-Type: application/json" -X POST \
+    -d '{"title": "Test"}' http://`docker-machine ip dev`:5000/record
+    {
+      "data": {
+        "title": "Test"
+      },
+      "id": 1
+    }
+
+*Retrieving all records*
+
+.. code-block:: console
+
+    $ curl http://`docker-machine ip dev`:5000"/record
+    {
+      "results": [
+        {
+          "data": {
+            "title": "Test"
+          },
+          "id": 1
+        }
+      ]
+    }
