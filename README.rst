@@ -117,3 +117,75 @@ Do you have a problem?
 
 - Check that your docker machine is running ``docker-machine ls``.
 - Check that your docker image is running ``docker ps``.
+
+2. Compose services
+-------------------
+
+The goal of this section is to extend our application to use multiple services
+and configure deployment it using ``docker-compose``.
+
+Let's start with configuring a Redis service. We will need to add
+``redis`` to ``requirements.txt`` and modify our ``app.py``.
+
+.. code-block:: python
+
+    import os
+    from redis import Redis
+    redis = Redis(host=os.environ.get('REDIS_HOST', 'localhost'), port=6379)
+
+Please note that we use environment variable ``REDIS_HOST`` to ease
+linking of services specified in ``docker-compose.yml``.
+
+docker-compose.yml
+~~~~~~~~~~~~~~~~~~
+
+Following configuration automatize builing of ``web`` node and creates
+link with ``redis``. We are going to use ``redis`` image from Docker Hub
+registry.
+
+.. code-block:: text
+
+    web:
+      build: .
+      ports:
+       - "5000:5000"
+      volumes:
+       - .:/code
+      links:
+       - redis
+      environment:
+       - REDIS_HOST=redis
+    redis:
+      image: redis
+
+*Check that you have ``docker-compose.yml`` in the same directory as
+``Dockerfile``.*
+
+Now you can start your start the machines using ``docker-compose up``
+and check that your application is available on the same url
+*"http://`docker-machine ip dev`:5000"*.
+
+You should get a message in your browser saying:
+
+``I have been seen 1 times.``
+
+We have checked that everything is up-and-running so we can keep the
+services running in the background using ``-d`` option.
+
+.. code-block:: console
+
+    $ docker-compose up -d
+    Starting example_redis_1...
+    Starting example_web_1...
+    $ docker-compose ps
+         Name                   Command             State           Ports
+    ------------------------------------------------------------------------------
+    example_redis_1   /entrypoint.sh redis-server   Up      6379/tcp
+    example_web_1     /bin/sh -c python app.py      Up      0.0.0.0:5000->5000/tcp
+
+
+**Q: How can I check the logs?**
+
+*A: You can use ``docker-compose logs`` to see logs from all machines or
+just ``docker-compose logs redis`` if you want to see logs from ``redis``
+one.*
