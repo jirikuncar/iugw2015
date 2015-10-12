@@ -1,7 +1,8 @@
 web:
   build: .
+  command: python app.py
   ports:
-   - "5000:5000"
+   - "5000"
   volumes:
    - .:/code
   links:
@@ -14,3 +15,11 @@ redis:
   image: redis
 db:
   image: postgres
+haproxy:
+  image: tutum/haproxy
+  environment:
+  - PORT=5000
+  links:
+  - web
+  ports:
+  - "80:80"

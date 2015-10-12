@@ -295,3 +295,64 @@ reloaded.
         }
       ]
     }
+
+
+2. Scaling your application
+---------------------------
+
+In this section we will briefly show how to scale and optimize your newly
+created application.
+
+.. code-block:: console
+
+    $ docker-compose scale web=4
+
+It is almost so simple however we need to add a *proxy* in front of our
+``web`` service and patch the plumbing.
+
+.. code-block:: text
+
+    haproxy:
+      image: tutum/haproxy
+      environment:
+      - PORT=5000
+      links:
+      - web
+      ports:
+      - "80:80"
+    ...
+    web:
+      ports:
+       - "5000"
+    ...
+
+After rebuilding and starting services you can look inside logs
+``docker-compose logs`` to see how the individual servers are used.
+
+Tuning ``Dockerfile``
+~~~~~~~~~~~~~~~~~~~~~
+
+In order to take advantage of Docker image caches we can refactor
+your ``Dockerfile`` so the installed requirements are cached.
+
+.. code-block:: text
+
+    FROM python:3.5
+    ENV PYTHONUNBUFFERED 1
+    RUN mkdir /code
+    WORKDIR /code
+    ADD requirements.txt /code/
+    RUN pip install -r requirements.txt
+    ADD . /code/
+
+To improve reusability of our ``web`` image we have removed automatic
+server startup and added to ``docker-compose.yml`` configuration.
+
+.. code-block:: text
+
+    web:
+       command: python app.py
+
+
+The above changes allow us to integrate task queue system for heavy
+computation.
