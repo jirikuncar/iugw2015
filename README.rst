@@ -2,7 +2,8 @@
  Invenio User Group Workshop 2015
 ==================================
 
-*Jiri Kuncar <jiri.kuncar@cern.ch>*
+- *Jiri Kuncar <jiri.kuncar@cern.ch>*
+- *Harris Tzovanakis <charalampos.tzovanakis@cern.ch>*
 
 Invenio 2 Technology Background
 ===============================
@@ -425,3 +426,93 @@ you can increase number of running workers.
 .. code-block:: console
 
     $ docker-compose scale worker=2
+
+3. Add an extension
+-------------------
+
+We will add ``Flask-IIIF`` extension to our example. A quick demo of the end
+result `<https://flask-iiif.herokuapp.com/>`_
+
+First we need to include in ``requirements.txt``
+
+.. code-block:: console
+
+    Flask-IIIF>=0.2.0
+
+Then update the ``app.py``
+
+.. code-block:: python
+
+    from flask import render_template
+
+    from flask_iiif import IIIF
+    from flask_restful import Api
+
+    iiif = IIIF(app=app)
+    api = Api(app=app)
+    iiif.init_restful(api)
+
+    def uuid_to_source(uuid):
+        image_path = os.path.join('./', 'images')
+        return os.path.join(image_path, uuid)
+
+    # Init the opener function
+    iiif.uuid_to_image_opener_handler(uuid_to_source)
+
+    # Initialize the cache
+    app.config['IIIF_CACHE_HANDLER'] = redis
+
+    @app.route('/image/<string:name>')
+    def formated(name):
+        return render_template("image.html", name=name)
+
+Now we need to create ``templates`` folder and create the ``image.html`` file.
+
+.. code-block:: console
+
+    $ mkdir templates
+    $ touch image.html
+    $ vim image.html
+
+Inside ``image.html`` we write
+
+.. code-block:: html
+
+    <img src="{{ iiif_image_url(uuid=name, size="200,200") }}" />
+
+Flask-IIIF supports a UUID (universally unique identifier) opener function
+which allows you to open an image either with fullpath or Bytestream.
+This means you can import any existing filemanager such as ``Amazon S3``.
+
+So let's assume for our example that the filemanager is our filesystem under
+the application directory ``./images``.
+
+
+.. code-block:: console
+
+    $ mkdir images
+    $ cd images
+    $ wget https://flask-iiif.herokuapp.com/static/images/native.jpg
+
+For *docker* users:
+
+.. code-block:: console
+
+    $ docker-compose stop
+    $ docker-compose build
+    $ docker-compose up -d
+
+For *virtualenv* users:
+
+.. code-block:: console
+
+    $ pip install -r requirements.txt
+
+Now you can open your browser on `<http://localhost:5000/image/native.jpg>`_
+
+Also you can access directly the RESTful API:
+
+- ``Rotate``: `<http://localhost:5000/api/multimedia/image/v2/native.jpg/full/500%2C500/90/default.png>`_
+- ``Bitonal``: `<http://localhost:5000/api/multimedia/image/v2/native.jpg/full/500%2C500/0/bitonal.png>`_
+- ``Crop``: `<http://localhost:5000/api/multimedia/image/v2/native.jpg/500,500,1500,1500/full/0/default.png>`_
+- ``All together``: `<http://localhost:5000/api/multimedia/image/v2/native.jpg/500,500,300,300/300,300/90/bitonal.png>`_

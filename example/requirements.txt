@@ -4,6 +4,8 @@ SQLAlchemy>=1.0
 Flask-SQLAlchemy>=2.0
 sqlalchemy-utils>=0.31.0
 
+Flask-IIIF>=0.2.0
+
 # extra for Postgres
 psycopg2
 
