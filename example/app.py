@@ -1,6 +1,9 @@
+import datetime
 import os
 import json
+import zlib
 
+from celery import Celery
 from flask import Flask, jsonify, request
 from flask_sqlalchemy import SQLAlchemy
 from redis import Redis
@@ -12,6 +15,16 @@ app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get(
 )
 db = SQLAlchemy(app)
 redis = Redis(host=os.environ.get('REDIS_HOST', 'localhost'), port=6379)
+celery = Celery('app', broker=os.environ.get(
+    'CELERY_BROKER_URL', 'redis://localhost:6379'
+))
+
+
+@celery.task()
+def make_sip(recid, data):
+    now = datetime.datetime.now().isoformat()
+    with open('./{0}_{1}.zip'.format(recid, now), 'wb') as f:
+        f.write(zlib.compress(json.dumps(data).encode('utf-8')))
 
 
 class Record(db.Model):
@@ -32,6 +45,7 @@ def add():
     record = Record(json=data)
     db.session.add(record)
     db.session.commit()
+    make_sip.delay(record.id, data)
     return jsonify(id=record.id, data=record.json)
 
 

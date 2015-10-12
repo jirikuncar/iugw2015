@@ -356,3 +356,72 @@ server startup and added to ``docker-compose.yml`` configuration.
 
 The above changes allow us to integrate task queue system for heavy
 computation.
+
+Worker
+~~~~~~
+
+Generally it is good idea to offload time consuming tasks from request handlers
+to keep the response time low.  One can use `Celery
+<http://www.celeryproject.org/>`_ for asynchronous task queue/job queue.
+
+First, we define a function that take record id and data and stores it in ZIP
+file.
+
+.. code-block:: python
+
+    import datetime
+    import zlib
+    from celery import Celery
+
+    celery = Celery('app', broker=os.environ.get(
+        'CELERY_BROKER_URL', 'redis://localhost:6379'
+    ))
+
+
+    @celery.task()
+    def make_sip(recid, data):
+        now = datetime.datetime.now().isoformat()
+        with open('./{0}_{1}.zip'.format(recid, now), 'wb') as f:
+            f.write(zlib.compress(json.dumps(data).encode('utf-8')))
+
+
+The decorator ``@celery.task()`` registers ``make_sip`` function as task in
+*Celery* application.  We should not forget to add ``celery`` package to
+``requirements.txt``.
+
+Next step is to update our ``docker-compose.yml`` with new ``worker`` node
+and include ``CELERY_BROKER_URL=redis://redis:6379`` in our ``web`` node.
+
+.. code-block:: text
+
+    worker:
+      build: .
+      command: celery -A app.celery worker -l INFO
+      volumes:
+       - .:/code
+      links:
+       - db
+       - redis
+      environment:
+       - REDIS_HOST=redis
+       - CELERY_BROKER_URL=redis://redis:6379
+       - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:postgres@db:5432/postgres
+
+
+Please note that because ``celery`` should not run under ``root`` user, we
+need to update ``Dockerfile``.
+
+.. code-block:: text
+
+    ...
+    RUN useradd --home-dir /home/demo --create-home --shell /bin/bash --uid 1000 demo
+    ...
+    USER demo
+
+
+Now you should be able to run your application. In case you have many requests
+you can increase number of running workers.
+
+.. code-block:: console
+
+    $ docker-compose scale worker=2

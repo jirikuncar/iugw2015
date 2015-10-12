@@ -10,6 +10,19 @@ web:
    - redis
   environment:
    - REDIS_HOST=redis
+   - CELERY_BROKER_URL=redis://redis:6379
+   - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:postgres@db:5432/postgres
+worker:
+  build: .
+  command: celery -A app.celery worker -l INFO
+  volumes:
+   - .:/code
+  links:
+   - db
+   - redis
+  environment:
+   - REDIS_HOST=redis
+   - CELERY_BROKER_URL=redis://redis:6379
    - SQLALCHEMY_DATABASE_URI=postgresql+psycopg2://postgres:postgres@db:5432/postgres
 redis:
   image: redis

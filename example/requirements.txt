@@ -6,3 +6,5 @@ sqlalchemy-utils>=0.31.0
 
 # extra for Postgres
 psycopg2
+
+celery>=3.1.18
