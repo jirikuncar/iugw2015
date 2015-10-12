@@ -1,0 +1,8 @@
+Flask>=0.10.1
+redis>=2.10.3
+SQLAlchemy>=1.0
+Flask-SQLAlchemy>=2.0
+sqlalchemy-utils>=0.31.0
+
+# extra for Postgres
+psycopg2
